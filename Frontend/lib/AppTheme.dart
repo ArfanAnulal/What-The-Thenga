@@ -1,18 +1,51 @@
-ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+import 'package:flutter/material.dart';
+
+class AppTheme {
+  static final lightTheme = ThemeData(
+    // Define a fun and vibrant color scheme
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: Colors.orangeAccent,
+      primary: Colors.orangeAccent,
+      secondary: Colors.lightBlueAccent,
+      background: Colors.yellow[100]!,
+    ),
+    useMaterial3: true,
+    scaffoldBackgroundColor: Colors.yellow[100],
+
+    // Update AppBar theme
+    appBarTheme: const AppBarTheme(
+      color: Colors.transparent, // Make it transparent to show the gradient
+      elevation: 0,
+      centerTitle: true,
+      titleTextStyle: TextStyle(
+        fontFamily: 'NoyhR',
+        fontSize: 32,
+        fontWeight: FontWeight.bold,
+        color: Colors.black,
       ),
+      actionsPadding: EdgeInsets.all(8),
+    ),
+
+    // Define fun text themes
+    textTheme: const TextTheme(
+      headlineMedium: TextStyle(
+        fontFamily: 'NoyhR',
+        fontSize: 28,
+        fontWeight: FontWeight.bold,
+        color: Colors.black87,
+        shadows: [
+          Shadow(
+            blurRadius: 10.0,
+            color: Colors.white,
+            offset: Offset(2.0, 2.0),
+          ),
+        ],
+      ),
+      bodyMedium: TextStyle(
+        fontFamily: 'NoyhR',
+        fontSize: 16,
+        color: Colors.black54,
+      ),
+    ),
+  );
+}
