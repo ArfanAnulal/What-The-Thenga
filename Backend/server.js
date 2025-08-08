@@ -1,103 +1,225 @@
-// server.js
 const express = require('express');
-const tf = require('@tensorflow/tfjs-node');
+const tf = require('@tensorflow/tfjs');
+require('@tensorflow/tfjs-backend-cpu');
 const multer = require('multer');
+const sharp = require('sharp');
+const cors = require('cors');
 const path = require('path');
-const { createCanvas, loadImage } = require('canvas');
 const fs = require('fs');
 
 const app = express();
-const port = 5000;
+const PORT = process.env.PORT || 3000;
 
-// Set up Multer for handling file uploads in memory
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Serve model files statically
+app.use('/models', express.static(__dirname, {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.json')) {
+      res.set('Content-Type', 'application/json');
+    } else if (filePath.endsWith('.bin')) {
+      res.set('Content-Type', 'application/octet-stream');
+    }
+  }
+}));
+
+// Configure multer for file uploads
 const upload = multer({
-    storage: multer.memoryStorage()
+  dest: 'uploads/',
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'), false);
+    }
+  }
 });
 
-// Define the path to the converted TensorFlow.js model
-const MODEL_PATH = path.join(__dirname, 'tfjs_model');
-let model;
+// Global variable to store the loaded model
+let model = null;
 
-// Define the image size and class names
-const IMG_SIZE = [260, 260];
-
-const CLASS_NAMES = ['COCONUT TREE', 'NOT COCONUT TREE'];
-
-// Load the model asynchronously when the server starts
+// Load the TensorFlow.js model
 async function loadModel() {
-    try {
-        if (!fs.existsSync(MODEL_PATH)) {
-            throw new Error(`Model directory not found at: ${MODEL_PATH}`);
-        }
-        model = await tf.loadLayersModel(`file://${MODEL_PATH}/model.json`);
-        console.log('✅ Model loaded successfully!');
-    } catch (e) {
-        console.error('❌ Error loading model:', e);
-        process.exit(1); // Exit if the model can't be loaded
-    }
+  try {
+    console.log('Loading model...');
+    
+    // Load model via HTTP after server starts
+    model = await tf.loadGraphModel(`http://localhost:${PORT}/models/model.json`);
+    console.log('Model loaded successfully');
+    console.log('Input shape:', model.inputs[0].shape);
+    console.log('Output shape:', model.outputs[0].shape);
+  } catch (error) {
+    console.error('Error loading model:', error);
+    process.exit(1);
+  }
 }
 
-// Preprocessing function, replicating the Python version
-async function preprocessImage(imageBuffer) {
-    // Load the image from the buffer using canvas
-    const img = await loadImage(imageBuffer);
-    const canvas = createCanvas(img.width, img.height);
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(img, 0, 0, img.width, img.height);
+// Preprocess image for the model
+async function preprocessImage(imagePath) {
+  try {
+    // Read and resize image to 260x260 (as expected by the model)
+    const imageBuffer = await sharp(imagePath)
+      .resize(260, 260)
+      .raw()
+      .toBuffer();
 
-    // Convert the canvas to a tensor
-    const tensor = tf.browser.fromPixels(canvas)
-        .resizeNearestNeighbor(IMG_SIZE)
-        .toFloat();
-
-    // The preprocessing for EfficientNetV2 is a specific function in Python.
-    // In tf.js, the `preprocess_input` function is equivalent to scaling the values.
-    // The exact scaling depends on the version, but the common practice is to normalize
-    // to a range like [-1, 1] which is what is done below.
-    const preprocessedTensor = tf.sub(
-      tf.mul(tensor, 2 / 255),
-      1
-    );
-
-    // Add a batch dimension
-    return preprocessedTensor.expandDims(0);
+    // Convert to tensor
+    const tensor = tf.tensor3d(new Uint8Array(imageBuffer), [260, 260, 3]);
+    
+    // Normalize pixel values to [0, 1] and add batch dimension
+    const normalized = tensor.cast('float32').div(255.0).expandDims(0);
+    
+    // Clean up
+    tensor.dispose();
+    
+    return normalized;
+  } catch (error) {
+    console.error('Error preprocessing image:', error);
+    throw error;
+  }
 }
 
-// API endpoint for prediction
-app.post('/predict', upload.single('file'), async (req, res) => {
+// Prediction endpoint
+app.post('/predict', upload.single('image'), async (req, res) => {
+  try {
     if (!req.file) {
-        return res.status(400).json({ error: 'No image file uploaded.' });
+      return res.status(400).json({
+        success: false,
+        error: 'No image file provided'
+      });
     }
 
-    try {
-        const imageTensor = await preprocessImage(req.file.buffer);
-        
-        // Make a prediction
-        const predictions = model.predict(imageTensor);
-        const predictionData = await predictions.data();
-
-        // Interpret the prediction
-        // The output of the sigmoid activation is a single probability score
-        const score = predictionData[0];
-        const predictedClass = score > 0.5 ? CLASS_NAMES[1] : CLASS_NAMES[0];
-        
-        // Return the JSON response
-        res.json({
-            predicted_class: predictedClass,
-            confidence: score
-        });
-
-    } catch (e) {
-        console.error('Prediction failed:', e);
-        res.status(500).json({ error: 'Prediction failed.' });
+    if (!model) {
+      return res.status(500).json({
+        success: false,
+        error: 'Model not loaded'
+      });
     }
+
+    console.log('Processing prediction for:', req.file.filename);
+
+    // Preprocess the uploaded image
+    const inputTensor = await preprocessImage(req.file.path);
+
+    // Make prediction
+    const prediction = model.predict(inputTensor);
+    const predictionValue = await prediction.data();
+
+    // Clean up tensors
+    inputTensor.dispose();
+    prediction.dispose();
+
+    // Clean up uploaded file
+    fs.unlinkSync(req.file.path);
+
+    // Convert prediction to probability (assuming sigmoid output)
+    const probability = predictionValue[0];
+    const isCoconutTree = probability > 0.5;
+    const confidence = isCoconutTree ? probability : 1 - probability;
+
+    console.log(`Prediction: ${probability}, Is Coconut: ${isCoconutTree}, Confidence: ${confidence}`);
+
+    res.json({
+      success: true,
+      prediction: {
+        isCoconutTree: isCoconutTree,
+        confidence: parseFloat((confidence * 100).toFixed(2)), // Convert to percentage
+        rawScore: parseFloat(probability.toFixed(4)),
+        classification: isCoconutTree ? 'Coconut Tree' : 'Not a Coconut Tree'
+      }
+    });
+
+  } catch (error) {
+    console.error('Error during prediction:', error);
+    
+    // Clean up uploaded file if it exists
+    if (req.file && req.file.path) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (cleanupError) {
+        console.error('Error cleaning up file:', cleanupError);
+      }
+    }
+
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error during prediction'
+    });
+  }
 });
 
-// Start the server after the model is loaded
-loadModel().then(() => {
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({
+    success: true,
+    status: 'Server is running',
+    modelLoaded: model !== null
+  });
+});
 
-    console.log('Starting server...');
-    app.listen(port, () => {
-        console.log(`Server is running on http://localhost:${port}`);
-    });
+// Test endpoint for basic functionality
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Coconut Tree Classification API',
+    endpoints: {
+      predict: 'POST /predict - Upload an image to classify',
+      health: 'GET /health - Check server status'
+    }
+  });
+});
+
+// Error handling middleware
+app.use((error, req, res, next) => {
+  if (error instanceof multer.MulterError) {
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        error: 'File too large. Maximum size is 10MB.'
+      });
+    }
+  }
+  
+  res.status(500).json({
+    success: false,
+    error: error.message || 'Internal server error'
+  });
+});
+
+// Start server
+async function startServer() {
+  // Create uploads directory if it doesn't exist
+  if (!fs.existsSync('uploads')) {
+    fs.mkdirSync('uploads');
+  }
+  
+  const server = app.listen(PORT, async () => {
+    console.log(`Server is running on port ${PORT}`);
+    console.log(`Health check: http://localhost:${PORT}/health`);
+    console.log(`Prediction endpoint: http://localhost:${PORT}/predict`);
+    
+    // Load the model after server starts (important!)
+    setTimeout(async () => {
+      await loadModel();
+    }, 1000); // Wait 1 second for server to fully start
+  });
+}
+
+// Handle graceful shutdown
+process.on('SIGINT', () => {
+  console.log('Shutting down server...');
+  if (model) {
+    model.dispose();
+  }
+  process.exit(0);
+});
+
+// Start the server
+startServer().catch(error => {
+  console.error('Failed to start server:', error);
+  process.exit(1);
 });
