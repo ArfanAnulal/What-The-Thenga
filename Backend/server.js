@@ -85,7 +85,7 @@ async function preprocessImage(imagePath) {
 }
 
 // Prediction endpoint
-app.post('/predict', upload.single('image'), async (req, res) => {
+app.post('/predict', upload.single('picture'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -115,7 +115,7 @@ app.post('/predict', upload.single('image'), async (req, res) => {
     prediction.dispose();
 
     // Clean up uploaded file
-    fs.unlinkSync(req.file.path);
+
 
     // Convert prediction to probability (assuming sigmoid output)
     const probability = predictionValue[0];
@@ -130,7 +130,7 @@ app.post('/predict', upload.single('image'), async (req, res) => {
         isCoconutTree: isCoconutTree,
         confidence: parseFloat((confidence * 100).toFixed(2)), // Convert to percentage
         rawScore: parseFloat(probability.toFixed(4)),
-        classification: isCoconutTree ? 'Coconut Tree' : 'Not a Coconut Tree'
+        classification: isCoconutTree ? 'Not a Coconut Tree' : 'Coconut Tree'
       }
     });
 

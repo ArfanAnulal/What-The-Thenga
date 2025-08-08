@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:weather/weather.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
+import 'dart:developer' as developer;
 
 // Enum to manage different UI states cleanly
 enum UIState { initial, loading, danger, safe, whatTheThenga, error }
@@ -25,11 +26,15 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // --- Image Picker Logic ---
   Future<void> _pickImage(ImageSource source) async {
+    developer.log('Attempting to pick image from $source...');
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: source, imageQuality: 50);
 
     if (image != null) {
+      developer.log('Image picked successfully: ${image.path}');
       _uploadImage(File(image.path));
+    } else {
+      developer.log('Image picking cancelled.');
     }
   }
 
@@ -65,67 +70,103 @@ class _MyHomePageState extends State<MyHomePage> {
   // --- API and Weather Logic ---
   Future<void> _uploadImage(File image) async {
     setState(() => _currentState = UIState.loading);
+    developer.log('Starting image upload...');
 
     String fileName = image.path.split('/').last;
     FormData formData = FormData.fromMap({
       "picture": await MultipartFile.fromFile(image.path, filename: fileName),
     });
 
+    const String apiUrl = 'http://10.0.2.2:3000/predict';
+    developer.log('Uploading to API: $apiUrl');
+
+    final dio = Dio(BaseOptions(
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 10),
+    ));
+
     try {
-      // **Replace with your actual API endpoint**
-      // var response = await Dio().post('YOUR_BACKEND_API_URL', data: formData);
+      final response = await dio.post(apiUrl, data: formData);
+      developer.log('API Response Status: ${response.statusCode}');
+      developer.log('API Response Data: ${response.data}');
 
-      // --- MOCK RESPONSE FOR TESTING ---
-      await Future.delayed(const Duration(seconds: 2));
-      // Simulate a positive score
-      var mockScore = 0.8; 
-      // var mockScore = 0.2; // Simulate a negative score
-      // --- END MOCK RESPONSE ---
-
-      // if (response.statusCode == 200) {
-      //   var score = response.data['score'];
-      if (mockScore > 0.5) { // Positive score threshold
-        _getWeather();
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        bool isCoconutTree = response.data['prediction']['isCoconutTree'];
+        developer.log('Prediction - isCoconutTree: $isCoconutTree');
+        if (isCoconutTree) {
+          await _getWeather();
+        } else {
+          setState(() => _currentState = UIState.whatTheThenga);
+        }
       } else {
-        setState(() => _currentState = UIState.whatTheThenga);
+        _handleError("Prediction failed. Status: ${response.statusCode}");
       }
-      // } else {
-      //   _handleError("Could not connect to the server.");
-      // }
-    } catch (e) {
-      _handleError("Something went wrong during upload.");
+    } on DioException catch (e) {
+      developer.log('DioException: ${e.toString()}', error: e);
+      if (e.type == DioExceptionType.connectionTimeout || e.type == DioExceptionType.receiveTimeout) {
+        _handleError("Server is taking too long to respond.");
+      } else if (e.type == DioExceptionType.connectionError) {
+         _handleError("Connection error. Is the server running?");
+      }
+      else {
+        _handleError("A network error occurred.");
+      }
+    }
+    catch (e) {
+      developer.log('Unexpected Error in _uploadImage: ${e.toString()}', error: e);
+      _handleError("An unexpected error occurred during upload.");
     }
   }
 
   Future<void> _getWeather() async {
+    developer.log('Fetching weather data...');
+    const String weatherApiKey = "a47bba80b386d8e342e66deb236e6d85";
+
+    if (weatherApiKey == "YOUR_WEATHER_API_KEY") {
+      developer.log('Weather API key is missing!', error: true);
+      _handleError("Please add your Weather API key!");
+      return;
+    }
+
     try {
+      developer.log('Checking location permissions...');
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
+      developer.log('Location permission status: $permission');
+
       if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
         _handleError("Location permissions are denied.");
         return;
       }
 
-      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-      
-      // **Replace with your actual Weather API key**
-      WeatherFactory wf = WeatherFactory("YOUR_WEATHER_API_KEY");
+      developer.log('Getting current position...');
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 15),
+      );
+      developer.log('Position received: $position');
+
+      WeatherFactory wf = WeatherFactory(weatherApiKey);
       Weather w = await wf.currentWeatherByLocation(position.latitude, position.longitude);
-      
-      // Using a low threshold for testing purposes
-      if (w.windSpeed != null && w.windSpeed! > 2) { // Wind speed threshold
+      developer.log('Weather data received: ${w.toString()}');
+
+      if (w.windSpeed != null && w.windSpeed! > 2) {
+        developer.log('Wind speed is high (${w.windSpeed}), setting state to DANGER');
         setState(() => _currentState = UIState.danger);
       } else {
+        developer.log('Wind speed is low (${w.windSpeed}), setting state to SAFE');
         setState(() => _currentState = UIState.safe);
       }
     } catch (e) {
+      developer.log('Error in _getWeather: ${e.toString()}', error: e);
       _handleError("Could not get location or weather data.");
     }
   }
 
   void _handleError(String message) {
+    developer.log('Handling error: $message', error: true);
     setState(() {
       _currentState = UIState.error;
       _errorMessage = message;
@@ -133,18 +174,19 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _resetState() {
+    developer.log('Resetting state to initial.');
     setState(() => _currentState = UIState.initial);
   }
 
   @override
   Widget build(BuildContext context) {
+    developer.log('Building UI for state: $_currentState');
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: Text(widget.title),
       ),
       body: Container(
-        // Fun gradient background
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -157,7 +199,6 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
         child: Stack(
           children: [
-            // Falling coconut animation for the 'danger' state
             if (_currentState == UIState.danger)
               Align(
                 alignment: Alignment.topCenter,
@@ -170,7 +211,6 @@ class _MyHomePageState extends State<MyHomePage> {
                         curve: Curves.bounceIn)
                     .rotate(duration: 1.seconds),
               ),
-            // Main content area
             Center(
               child: _buildContentByState(),
             ),
@@ -210,7 +250,6 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  // Builds the main content based on the current UI state
   Widget _buildContentByState() {
     switch (_currentState) {
       case UIState.loading:
@@ -231,7 +270,6 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  // Helper widget for creating animated text blocks
   Widget _buildAnimatedText(String title, String subtitle, {bool isError = false}) {
     return Padding(
       padding: const EdgeInsets.all(24.0),
