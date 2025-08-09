@@ -41,6 +41,8 @@ dependencies:
   flutter_animate: ^4.5.0
   animated_text_kit: ^4.2.2
   audioplayers: ^6.5.0
+  flutter_native_splash: ^2.4.6
+  flutter_launcher_icons: ^0.14.4
 
 dev_dependencies:
   flutter_test:
@@ -53,6 +55,35 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
 
+flutter_launcher_icons:
+  # === Android Settings ===
+  android: true
+  image_path: "assets/icons/iconsCoco.png" # Path to your transparent foreground
+  adaptive_icon_background: "#fbf4e0"      # Your chosen background color
+  adaptive_icon_foreground: "assets/icons/iconsCoco.png" # Path to your transparent foreground
+
+  # === iOS Settings ===
+  # iOS doesn't use adaptive icons, so we provide a standard icon.
+  # The package will place your foreground image on a solid background color for iOS.
+  ios: true
+  image_path_ios: "assets/icons/iconsCoco.png"
+  remove_alpha_ios: true
+
+flutter_native_splash:
+  color: "#fbf4e0"
+
+  image: assets/icons/iconsCoco.png
+
+  # (Optional) You can also define separate colors/images for dark mode.
+  # color_dark: "#1A1A2E"
+  # image_dark: assets/splash_icon.png
+
+  # The following section is for Android 12+ specific settings
+  android_12:
+    image: assets/icons/iconsCoco.png
+    color: "#fbf4e0"
+    # image_dark: assets/splash_icon.png
+    # color_dark: "#1A1A2E"
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -91,5 +122,6 @@ flutter:
   #         weight: 700
   assets:
     - assets/audio/
+    - assets/icons/
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
