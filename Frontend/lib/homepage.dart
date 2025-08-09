@@ -80,9 +80,10 @@ class _MyHomePageState extends State<MyHomePage> {
     const String apiUrl = 'http://10.0.2.2:3000/predict';
     developer.log('Uploading to API: $apiUrl');
 
+    // Increased the timeout to 30 seconds to give the ML model more time
     final dio = Dio(BaseOptions(
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 30),
     ));
 
     try {
@@ -102,19 +103,19 @@ class _MyHomePageState extends State<MyHomePage> {
         _handleError("Prediction failed. Status: ${response.statusCode}");
       }
     } on DioException catch (e) {
-      developer.log('DioException: ${e.toString()}', error: e);
-      if (e.type == DioExceptionType.connectionTimeout || e.type == DioExceptionType.receiveTimeout) {
-        _handleError("Server is taking too long to respond.");
+      if (e.type == DioExceptionType.badResponse) {
+        _handleError("Server error (${e.response?.statusCode}). Check the server logs!", e);
+      } else if (e.type == DioExceptionType.connectionTimeout || e.type == DioExceptionType.receiveTimeout) {
+        _handleError("Server is taking too long to respond.", e);
       } else if (e.type == DioExceptionType.connectionError) {
-         _handleError("Connection error. Is the server running?");
+         _handleError("Connection error. Is the server running?", e);
       }
       else {
-        _handleError("A network error occurred.");
+        _handleError("A network error occurred: ${e.message}", e);
       }
     }
-    catch (e) {
-      developer.log('Unexpected Error in _uploadImage: ${e.toString()}', error: e);
-      _handleError("An unexpected error occurred during upload.");
+    catch (e, stackTrace) {
+      _handleError("An unexpected error occurred during upload.", e, stackTrace);
     }
   }
 
@@ -123,12 +124,21 @@ class _MyHomePageState extends State<MyHomePage> {
     const String weatherApiKey = "a47bba80b386d8e342e66deb236e6d85";
 
     if (weatherApiKey == "YOUR_WEATHER_API_KEY") {
-      developer.log('Weather API key is missing!', error: true);
       _handleError("Please add your Weather API key!");
       return;
     }
 
     try {
+      // 1. Check if location services are enabled.
+      developer.log('Checking if location services are enabled...');
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        _handleError('Location services are disabled.');
+        return;
+      }
+      developer.log('Location services are enabled.');
+
+      // 2. Check and request permissions.
       developer.log('Checking location permissions...');
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
@@ -141,13 +151,16 @@ class _MyHomePageState extends State<MyHomePage> {
         return;
       }
 
+      // 3. Get the current position with robust settings.
       developer.log('Getting current position...');
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
         timeLimit: const Duration(seconds: 15),
+        forceAndroidLocationManager: true, // Use this to improve reliability on some emulators
       );
       developer.log('Position received: $position');
 
+      // 4. Fetch weather data.
       WeatherFactory wf = WeatherFactory(weatherApiKey);
       Weather w = await wf.currentWeatherByLocation(position.latitude, position.longitude);
       developer.log('Weather data received: ${w.toString()}');
@@ -159,14 +172,18 @@ class _MyHomePageState extends State<MyHomePage> {
         developer.log('Wind speed is low (${w.windSpeed}), setting state to SAFE');
         setState(() => _currentState = UIState.safe);
       }
-    } catch (e) {
-      developer.log('Error in _getWeather: ${e.toString()}', error: e);
-      _handleError("Could not get location or weather data.");
+    } catch (e, stackTrace) {
+      _handleError("Could not get location or weather data.", e, stackTrace);
     }
   }
 
-  void _handleError(String message) {
-    developer.log('Handling error: $message', error: true);
+  void _handleError(String message, [Object? error, StackTrace? stackTrace]) {
+    developer.log(
+      'Handling error: $message',
+      error: error,
+      stackTrace: stackTrace,
+      name: 'CoconutAppError'
+    );
     setState(() {
       _currentState = UIState.error;
       _errorMessage = message;
@@ -221,20 +238,6 @@ class _MyHomePageState extends State<MyHomePage> {
         color: Colors.black.withOpacity(0.8),
         shape: const CircularNotchedRectangle(),
         notchMargin: 8.0,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.refresh, color: Colors.white),
-              onPressed: _resetState,
-            ),
-            const SizedBox(width: 40), // Spacer for the FAB
-            IconButton(
-              icon: const Icon(Icons.info_outline, color: Colors.white),
-              onPressed: () { /* Could show an info dialog */ },
-            ),
-          ],
-        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: FloatingActionButton(

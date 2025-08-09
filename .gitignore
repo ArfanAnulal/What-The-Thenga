@@ -44,7 +44,7 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-
-build
+Frontend/build
+Frontend/.idea
+Frontend/.dart_tool
 Backend/node_modules/
-
