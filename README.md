@@ -51,17 +51,17 @@ For Software:
    </td>
    <td><strong>Screen when it's not a tree</strong>
    </td>
-    <td><strong>Screen when it's not a tree</strong>
+    <td><strong>Screen when no danger exists</strong>
    </td>
   </tr>
   <tr>
-    <td><em><img src="assets/images/1.png" alt="Home Screen" width="250"></em>
+    <td><em><img src="Frontend/assets/images/1.png" alt="Home Screen" width="250"></em>
    </td>
-   <td><em><img src="assets/images/2.png" alt="Screen when it's not a tree" width="250"></em>
+   <td><em><img src="Frontend/assets/images/2.png" alt="Screen when it's not a tree" width="250"></em>
    </td>
-   <td><em><img src="assets/images/3.png" alt="Screen when it's not a tree" width="250"></em>
+   <td><em><img src="Frontend/assets/images/3.png" alt="Screen when it's not a tree" width="250"></em>
    </td>
-   <td><em><img src="assets/images/4.png" alt="Screen when no danger exists" width="250"></em>
+   <td><em><img src="Frontend/assets/images/4.png" alt="Screen when no danger exists" width="250"></em>
    </td>
   </tr>
 </table>
@@ -70,7 +70,7 @@ For Software:
 
 ### Project Demo
 # Video
-![Video Link](https://youtube.com/shorts/rWFB4u5gzX8?feature=share)
+https://youtube.com/shorts/rWFB4u5gzX8?feature=share
 *The video shows the working of the app and chances of a thenga falling on you with appropriate mood musicx`*
 
 
