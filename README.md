@@ -34,7 +34,7 @@ For Software:
 For Software:
 # Installation
 - For the backend, fork the repository, go to the backend folder and run `npm i`
-- For the frontend, download the APK in the releases bar
+- For the frontend, fork the repository, setup flutter and run the app on an emulator by going to Frontend/lib/main.dart in terminal and running `flutter run`
 
 # Run
 - For the backend, go to the backend folder and run `npm start`
