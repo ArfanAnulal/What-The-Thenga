@@ -13,7 +13,7 @@
 - Member 2: Seona Ann Tom - Viswajyothi College Of Engineering And Technology
 
 ### Project Description
-A useless mobile app that uses a machine learning model to determine if a photo contains a coconut tree. If it does, the app takes the current location and puts the data into a live weather API and pulls data of the local wind speed to predict the chances of a coconut falling on you.
+A useless mobile app that uses a machine learning model to determine if a photo contains a coconut tree. If it does, the app takes the current location and puts the data into a live weather API and pulls data of the local wind speed to predict the chances of a coconut falling on you. Now with looping mood music!
 
 ### The Problem (that doesn't exist)
 We aim to solve the problem of finding if a coconut will fall on your head
@@ -43,23 +43,24 @@ For Software:
 For Software:
 
 # Screenshots (Add at least 3)
-![Screenshot1](Add screenshot 1 here with proper name)
-*Add caption explaining what this shows*
+![Screenshot1](assets/images/1.png)
+*Home Screen*
 
-![Screenshot2](Add screenshot 2 here with proper name)
-*Add caption explaining what this shows*
+![Screenshot2](assets/images/2.png)
+*Screen when it's not a tree*
 
-![Screenshot3](Add screenshot 3 here with proper name)
-*Add caption explaining what this shows*
+![Screenshot3](assets/images/3.png)
+*Screen when coconut can fall on you*
+
+![Screenshot4](assets/images/4.png)
+*Screen when no danger exists*
 
 
 ### Project Demo
 # Video
-[Add your demo video link here]
-*Explain what the video demonstrates*
+![Video Link](https://youtube.com/shorts/rWFB4u5gzX8?feature=share)
+*The video shows the working of the app and chances of a thenga falling on you with appropriate mood music*
 
-# Additional Demos
-[Add any extra demo materials/links]
 
 ## Team Contributions
 - Seona Ann Tom: ML model training and backend
