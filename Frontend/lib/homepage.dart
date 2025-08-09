@@ -7,22 +7,78 @@ import 'package:weather/weather.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
 import 'dart:developer' as developer;
+// 1. Import the audioplayers package
+import 'package:audioplayers/audioplayers.dart';
 
 // Enum to manage different UI states cleanly
 enum UIState { initial, loading, danger, safe, whatTheThenga, error }
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
-
   final String title;
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+// 2. Implement WidgetsBindingObserver to handle app lifecycle (pause/resume)
+class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   UIState _currentState = UIState.initial;
   String _errorMessage = '';
+
+  // 3. Create an instance of the AudioPlayer
+  final AudioPlayer _audioPlayer = AudioPlayer();
+
+  @override
+  void initState() {
+    super.initState();
+    developer.log('initState called.');
+
+    // --- Audio Player Setup ---
+    // 4. Configure and start the background music
+    _setupAudioPlayer();
+
+    // --- App Lifecycle Observer ---
+    // 5. Add the observer to listen for when the app is paused or resumed
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  void _setupAudioPlayer() async {
+    // Set the release mode to loop for continuous playback
+    await _audioPlayer.setReleaseMode(ReleaseMode.loop);
+    // Start playing the audio from the assets folder.
+    // The low-latency mode is better for short sound effects, not long music tracks.
+    await _audioPlayer.play(AssetSource('audio/CocoSong.mp3'),
+        mode: PlayerMode.mediaPlayer);
+    developer.log('Audio player started in loop mode.');
+  }
+
+  // 6. Add the App Lifecycle handler
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Pause the music when the app is in the background
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive || state == AppLifecycleState.detached) {
+      developer.log('App paused, pausing audio.');
+      _audioPlayer.pause();
+    }
+    // Resume the music when the app is brought back to the foreground
+    else if (state == AppLifecycleState.resumed) {
+      developer.log('App resumed, resuming audio.');
+      _audioPlayer.resume();
+    }
+  }
+
+
+  @override
+  void dispose() {
+    developer.log('dispose called.');
+    // 7. Stop and release all resources
+    WidgetsBinding.instance.removeObserver(this); // Remove the lifecycle observer
+    _audioPlayer.dispose(); // Dispose of the audio player
+    super.dispose();
+  }
+
 
   // --- Image Picker Logic ---
   Future<void> _pickImage(ImageSource source) async {
@@ -285,9 +341,9 @@ class _MyHomePageState extends State<MyHomePage> {
                 title,
                 textAlign: TextAlign.center,
                 textStyle: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontSize: 48,
-                  color: isError ? Colors.redAccent : Colors.black87,
-                ),
+                      fontSize: 48,
+                      color: isError ? Colors.redAccent : Colors.black87,
+                    ),
               ),
             ],
             isRepeatingAnimation: false,
