@@ -43,17 +43,29 @@ For Software:
 For Software:
 
 # Screenshots (Add at least 3)
-![Screenshot1](assets/images/1.png)
-*Home Screen*
+<table>
+  <tr>
+   <td><strong>Home Screen</strong>
+   </td>
+   <td><strong>Screen when it's not a tree</strong>
+   </td>
+   <td><strong>Screen when it's not a tree</strong>
+   </td>
+    <td><strong>Screen when it's not a tree</strong>
+   </td>
+  </tr>
+  <tr>
+    <td><em><img src="assets/images/1.png" alt="Home Screen" width="250"></em>
+   </td>
+   <td><em><img src="assets/images/2.png" alt="Screen when it's not a tree" width="250"></em>
+   </td>
+   <td><em><img src="assets/images/3.png" alt="Screen when it's not a tree" width="250"></em>
+   </td>
+   <td><em><img src="assets/images/4.png" alt="Screen when no danger exists" width="250"></em>
+   </td>
+  </tr>
+</table>
 
-![Screenshot2](assets/images/2.png)
-*Screen when it's not a tree*
-
-![Screenshot3](assets/images/3.png)
-*Screen when coconut can fall on you*
-
-![Screenshot4](assets/images/4.png)
-*Screen when no danger exists*
 
 
 ### Project Demo
