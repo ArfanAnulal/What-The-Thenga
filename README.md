@@ -59,7 +59,7 @@ For Software:
 ### Project Demo
 # Video
 ![Video Link](https://youtube.com/shorts/rWFB4u5gzX8?feature=share)
-*The video shows the working of the app and chances of a thenga falling on you with appropriate mood music*
+*The video shows the working of the app and chances of a thenga falling on you with appropriate mood musicx`*
 
 
 ## Team Contributions
